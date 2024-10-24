@@ -1,2 +1,3 @@
 # EduMap
-This is a college major project
+
+This is a college Final year major project

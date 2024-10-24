@@ -33,7 +33,8 @@ const Login = () => {
 
   return (
     <div className={styles.container}>
-      <h2>Login</h2>
+      <h1 className={styles.title}>EduMap</h1>
+      <h2 className={styles.subtitle}>Login</h2>
       <form onSubmit={handleLogin}>
         <div className={styles.inputGroup}>
           <label>Email</label>
@@ -42,6 +43,7 @@ const Login = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className={styles.inputField} /* Add a class for the input field */
           />
         </div>
         <div className={styles.inputGroup}>
@@ -51,6 +53,7 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            className={styles.inputField} /* Add a class for the input field */
           />
         </div>
         <button type="submit" className={styles.button}>
@@ -60,6 +63,7 @@ const Login = () => {
       </form>
     </div>
   );
+  
 };
 
 export default Login;

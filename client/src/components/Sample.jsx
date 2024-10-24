@@ -294,8 +294,9 @@ import React, { useState } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import MindMap from "./MindMap"; // Import the MindMap component
 
-const API_KEY = import.meta.env.GEMINI_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 console.log(API_KEY); // Logs your API key from the .env file
+
 // Replace with your API key
 const genAI = new GoogleGenerativeAI(API_KEY);
 

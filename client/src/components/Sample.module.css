@@ -1,0 +1,133 @@
+.app {
+  font-family: "Arial", sans-serif;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #333;
+  color: white;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: white;
+}
+
+.logo-icon {
+  height: 2rem;
+  width: 2rem;
+  margin-right: 0.5rem;
+}
+
+.logo-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.nav {
+  display: flex;
+}
+
+.nav-link {
+  margin: 0 1rem;
+  text-decoration: none;
+  color: white;
+}
+
+.main {
+  padding: 2rem;
+}
+
+.section {
+  padding: 2rem 0;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.cta-link {
+  display: inline-block;
+  background-color: #3498db;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  margin-right: 1rem;
+}
+
+.feature-grid {
+  display: grid;
+  /* grid-template-columns: 1fr 1fr 1fr; */
+  grid-template-columns: 1fr;
+
+  gap: 2rem;
+}
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem; /* Add margin between FeatureCards */
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.feature-content {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.feature-image {
+  height: auto;
+  width: 30%; /* Adjust width as needed */
+}
+
+.text-content {
+  width: 50%; /* Adjust width as needed */
+}
+
+.feature-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.feature-description {
+  font-size: 1rem;
+  margin: 0; /* Remove default margin */
+}
+
+.nav-element {
+  background-color: #0056b3;
+  padding: 4px;
+  margin: 5px;
+  color: white;
+  border-radius: 10%;
+}
+
+.summary-btn {
+  background-color: #0056b3;
+  padding: 5px;
+  margin: 5px;
+  color: white;
+  border-radius: 10%;
+  display: inline;
+}

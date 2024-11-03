@@ -1,21 +1,23 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import styles from "./Login.module.css";
+import styles from "./Register.module.css";
 import { FaGoogle } from "react-icons/fa";
 import illustration from "../assets/illustration.png";
 
 
-const Login = () => {
+const Register = () => {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [cpassword, setCpassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-    const handleLogin = async (e) => {
+    const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/api/v1/users/login", {
+      const response = await fetch("http://localhost:3000/api/v1/users/Register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -26,7 +28,7 @@ const Login = () => {
       console.log(data.status);
       if (data.status == "success") {
         localStorage.setItem("token", data.token); // Save token to localStorage
-        navigate("/mindmap"); // Redirect to mindmap page after login
+        navigate("/mindmap"); // Redirect to mindmap page after Register
       } else {
         setError("Invalid credentials");
       }
@@ -48,7 +50,18 @@ const Login = () => {
       <div className={styles.formContainer}>
         <h1 className={styles.logo}>EduMap</h1>
         <h2>Welcome to EduMap</h2>
-        <form onSubmit={handleLogin} className={styles.form}>
+        <form onSubmit={handleRegister} className={styles.form}>
+          <div className={styles.inputGroup}>
+            <label>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className={styles.inputField}
+            />
+          </div>
+
           <div className={styles.inputGroup}>
             <label>Email</label>
             <input
@@ -59,6 +72,7 @@ const Login = () => {
               className={styles.inputField}
             />
           </div>
+
           <div className={styles.inputGroup}>
             <label>Password</label>
             <input
@@ -68,12 +82,22 @@ const Login = () => {
               required
               className={styles.inputField}
             />
-            <a href="#" className={styles.forgotPassword}>
-              Forgot password?
-            </a>
+          </div>
+
+          <div>
+            
+
+          <label>Confirm Password</label>
+            <input
+              type="password"
+              value={cpassword}
+              onChange={(e) => setCpassword(e.target.value)}
+              required
+              className={styles.inputField}
+            />
           </div>
           <button type="submit" className={styles.button} disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Sign in"}
+            {isLoading ? "Logging in..." : "Sign up"}
           </button>
           {error && <p className={styles.error}>{error}</p>}
           {/* <div className={styles.divider}>or</div>
@@ -81,7 +105,7 @@ const Login = () => {
             <FaGoogle className={styles.googleIcon} /> Sign in with Google
           </button> */}
           <p className={styles.createAccount}>
-            New to EduMap? <a href="/register">Create Account</a>
+            Already a member? <a href="/register">Log in</a>
           </p>
         </form>
       </div>
@@ -89,4 +113,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

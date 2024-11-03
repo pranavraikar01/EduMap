@@ -105,7 +105,7 @@ const Register = () => {
             <FaGoogle className={styles.googleIcon} /> Sign in with Google
           </button> */}
           <p className={styles.createAccount}>
-            Already a member? <a href="/register">Log in</a>
+            Already a member? <a href="/login">Log in</a>
           </p>
         </form>
       </div>

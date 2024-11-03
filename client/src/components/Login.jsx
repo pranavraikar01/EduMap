@@ -68,9 +68,9 @@ const Login = () => {
               required
               className={styles.inputField}
             />
-            <a href="#" className={styles.forgotPassword}>
+            {/* <a href="#" className={styles.forgotPassword}>
               Forgot password?
-            </a>
+            </a> */}
           </div>
           <button type="submit" className={styles.button} disabled={isLoading}>
             {isLoading ? "Logging in..." : "Sign in"}

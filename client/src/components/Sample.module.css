@@ -18,7 +18,7 @@
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: white;
+  color: inherit; /* Keeps logo color consistent */
 }
 
 .logo-icon {
@@ -28,18 +28,23 @@
 }
 
 .logo-text {
-  font-size: 1.2rem;
+  font-size: 1.5rem; /* Increased for better readability */
   font-weight: bold;
 }
 
 .nav {
   display: flex;
+  gap: 1.5rem; /* Use gap instead of margin for consistent spacing */
 }
 
 .nav-link {
-  margin: 0 1rem;
   text-decoration: none;
-  color: white;
+  color: inherit; /* Consistent color with header */
+  transition: color 0.3s ease; /* Smooth transition on hover */
+}
+
+.nav-link:hover {
+  color: #f0f0f0; /* Lighter shade on hover */
 }
 
 .main {
@@ -51,41 +56,51 @@
 }
 
 .title {
-  font-size: 2rem;
+  font-size: 2.5rem; /* Increased for a more prominent title */
   font-weight: bold;
   margin-bottom: 1rem;
 }
 
 .subtitle {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   margin-bottom: 2rem;
+  color: #555; /* Subtle color for the subtitle */
 }
 
 .cta-link {
   display: inline-block;
   background-color: #3498db;
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
+  padding: 0.75rem 1.5rem; /* Increased padding for better spacing */
+  border-radius: 0.5rem; /* More rounded for a modern look */
   text-decoration: none;
   margin-right: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.cta-link:hover {
+  background-color: #2980b9; /* Darker shade on hover */
 }
 
 .feature-grid {
   display: grid;
-  /* grid-template-columns: 1fr 1fr 1fr; */
-  grid-template-columns: 1fr;
-
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive grid */
   gap: 2rem;
 }
+
 .feature-card {
   display: flex;
   flex-direction: column;
-  margin-bottom: 2rem; /* Add margin between FeatureCards */
-  padding: 1rem;
+  padding: 1.5rem; /* Increased padding */
   border: 1px solid #ddd;
-  border-radius: 0.25rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Slightly larger shadow for depth */
+  background-color: white; /* Ensure a consistent background */
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px); /* Slight lift effect on hover */
 }
 
 .feature-content {
@@ -96,8 +111,8 @@
 }
 
 .feature-image {
-  height: auto;
   width: 30%; /* Adjust width as needed */
+  height: auto;
 }
 
 .text-content {
@@ -117,17 +132,27 @@
 
 .nav-element {
   background-color: #0056b3;
-  padding: 4px;
-  margin: 5px;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem;
   color: white;
-  border-radius: 10%;
+  border-radius: 0.25rem;
+  transition: background-color 0.3s ease;
+}
+
+.nav-element:hover {
+  background-color: #004494; /* Darker shade on hover */
 }
 
 .summary-btn {
   background-color: #0056b3;
-  padding: 5px;
-  margin: 5px;
+  padding: 0.5rem 1rem; /* Balanced padding */
+  margin: 0.5rem;
   color: white;
-  border-radius: 10%;
-  display: inline;
+  border-radius: 0.25rem;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.summary-btn:hover {
+  background-color: #004494; /* Darker shade on hover */
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import MindMapModal from "./MindMapModal"; // Import the modal component
 import styles from "./MyMindMaps.module.css"; // Custom CSS for the page
+import Navbar from "./Navbar";
 
 function MyMindMaps() {
   const [mindmaps, setMindmaps] = useState([]);
@@ -36,6 +37,7 @@ function MyMindMaps() {
 
   return (
     <div className={styles.container}>
+      <Navbar/>
       <h1>My Mind Maps</h1>
       <div className={styles.cardContainer}>
         {mindmaps.map((mindmap) => (

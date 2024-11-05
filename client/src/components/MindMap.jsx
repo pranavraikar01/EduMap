@@ -245,7 +245,7 @@ export default function MindMap({ skeleton }) {
         setEdges((eds) => [...eds, ...newEdges]);
       }
     },
-    [expandedNodes, nodes, edges, setNodes, setEdges, skeleton]
+    [expandedNodes, nodes, edges, setNodes, setEdges, skeleton],
   );
 
   return (

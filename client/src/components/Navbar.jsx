@@ -13,7 +13,7 @@ const Navbar = () => {
 
   return (
     <header className={styles.header}>
-      <a className={styles.logo} href="#">
+      <a className={styles.logo} href="/">
         <span className={styles["logo-text"]}>EduMap</span>
       </a>
       <nav className={styles.nav}>
@@ -31,9 +31,9 @@ const Navbar = () => {
             Login
           </Link>
         ) : (
-          <button onClick={handleLogout} className={styles["nav-element"]}>
+          <Link onClick={handleLogout} className={styles["nav-element"]}>
             Logout
-          </button>
+          </Link>
         )}
       </nav>
     </header>

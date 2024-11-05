@@ -293,6 +293,7 @@
 import React, { useState } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import MindMap from "./MindMap"; // Import the MindMap component
+import Navbar from "./Navbar";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 console.log(API_KEY); // Logs your API key from the .env file
@@ -441,9 +442,10 @@ function Sample() {
 
   return (
     <div style={styles.container}>
+      <Navbar />
       <h1>PDF Text Extractor & Mind Map Generator</h1>
 
-      <input type="file" onChange={handleFileChange} />
+      <input type="file" onChange={handleFileChange} /> <br />
       <button onClick={handleFileUpload}>Upload and Extract Text</button>
 
       {error && <p style={{ color: "red" }}>{error}</p>}

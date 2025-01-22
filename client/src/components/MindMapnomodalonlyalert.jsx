@@ -160,8 +160,8 @@ import {
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import EditableNode from "./EditableNode";
-
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+console.log(API_KEY); // Logs your API key from the .env file
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const initialNodes = [
@@ -193,79 +193,17 @@ function computeLayout(nodes, parentPosition) {
   return layoutNodes;
 }
 
-// Modal Component
-const Modal = ({ visible, content, onClose }) => {
-  if (!visible) return null;
-
-  return (
-    <div style={modalStyles.overlay}>
-      <div style={modalStyles.modal}>
-        <h3>Node Description</h3>
-        <div style={modalStyles.content}>
-          <p>{content}</p>
-        </div>
-        <button onClick={onClose} style={modalStyles.closeButton}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const modalStyles = {
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  modal: {
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "8px",
-    width: "400px",
-    maxHeight: "80vh", // Set max height to 80% of viewport height
-    overflow: "hidden", // Prevent content from overflowing outside the modal
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-  },
-  content: {
-    overflowY: "auto", // Enable vertical scrolling
-    maxHeight: "60vh", // Limit content height within the modal
-    marginBottom: "10px",
-  },
-  closeButton: {
-    padding: "8px 16px",
-    backgroundColor: "#007BFF",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    alignSelf: "center",
-  },
-};
-
-export default function MindMap({ skeleton, extractedText, description }) {
+export default function MindMap({ skeleton, extractedText }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [expandedNodes, setExpandedNodes] = useState(new Set());
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalContent, setModalContent] = useState("");
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  // Function to fetch the description of a node using Google Generative AI
+  // Function to fetch the description of a node using Google Custom Search API
   const fetchNodeDescription = async (id, label) => {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -288,18 +226,12 @@ export default function MindMap({ skeleton, extractedText, description }) {
       const content =
         response.candidates[0].content.parts[0].text ||
         "No description available.";
-      // alert(`Description for "${label}": ${content}`);
-
-      // Set modal content and make it visible
-      setModalContent(`Description for "${label}":\n${content}`);
-      setModalVisible(true);
+      alert(`Description for "${label}": ${content}`);
     } catch (error) {
       console.error("Error fetching description:", error);
-      setModalContent("An error occurred while fetching the description.");
-      setModalVisible(true);
+      alert("An error occurred while fetching the description");
     }
   };
-
   const onNodeClick = useCallback(
     (event, node) => {
       const isExpanded = expandedNodes.has(node.id);
@@ -351,33 +283,25 @@ export default function MindMap({ skeleton, extractedText, description }) {
   );
 
   return (
-    <>
-      <ReactFlow
-        nodes={nodes.map((node) => ({
-          ...node,
-          type: "editableNode",
-          data: {
-            ...node.data,
-            onFetchDescription: () =>
-              fetchNodeDescription(node.id, node.data.label),
-          },
-        }))}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        nodeTypes={{ editableNode: EditableNode }}
-      >
-        <Controls />
-        <MiniMap />
-        <Background variant="dots" gap={12} size={1} />
-      </ReactFlow>
-      <Modal
-        visible={modalVisible}
-        content={modalContent}
-        onClose={() => setModalVisible(false)}
-      />
-    </>
+    <ReactFlow
+      nodes={nodes.map((node) => ({
+        ...node,
+        type: "editableNode",
+        data: {
+          ...node.data,
+          onFetchDescription: fetchNodeDescription, // Pass the description fetcher to nodes
+        },
+      }))}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onNodeClick={onNodeClick}
+      nodeTypes={{ editableNode: EditableNode }} // Register the custom node type
+    >
+      <Controls />
+      <MiniMap />
+      <Background variant="dots" gap={12} size={1} />
+    </ReactFlow>
   );
 }

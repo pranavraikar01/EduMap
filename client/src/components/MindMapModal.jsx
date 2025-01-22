@@ -16,7 +16,10 @@ function MindMapModal({ mindmap, onClose }) {
 
           {/* For now, keeping the modal content blank */}
           <div style={{ width: "100vw", height: "100vh" }}>
-            <MindMap skeleton={mindmap.mindmapObject} />{" "}
+            <MindMap
+              skeleton={mindmap.mindmapObject}
+              description={mindmap.description}
+            />{" "}
             {/* Pass skeleton to MindMap */}
           </div>
         </div>

@@ -444,13 +444,10 @@ function Sample() {
     <div style={styles.container}>
       <Navbar />
       <h1>PDF Text Extractor & Mind Map Generator</h1>
-
       <input type="file" onChange={handleFileChange} /> <br />
       <button onClick={handleFileUpload}>Upload and Extract Text</button>
-
       {error && <p style={{ color: "red" }}>{error}</p>}
       {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
-
       {extractedText && (
         <div>
           <h2>Extracted Text:</h2>
@@ -460,12 +457,16 @@ function Sample() {
           </div>
         </div>
       )}
-
       {skeleton && (
         <div>
           <h2>Generated Mind Map:</h2>
           <div style={{ width: "100vw", height: "100vh" }}>
-            <MindMap skeleton={skeleton} /> {/* Pass skeleton to MindMap */}
+            <MindMap
+              skeleton={skeleton}
+              extractedText={extractedText}
+              description={""}
+            />{" "}
+            {/* Pass skeleton to MindMap */}
           </div>
 
           {/* Input for description */}

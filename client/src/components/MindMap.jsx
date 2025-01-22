@@ -269,7 +269,7 @@ export default function MindMap({ skeleton, extractedText, description }) {
   const fetchNodeDescription = async (id, label) => {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Based on the data given in:\n ${extractedText}, generate a description for ${label} based on your self knowledge base, if and only if given data is empty then generate a description based on ${description} .`;
+      const prompt = `Based on the data given in:\n ${extractedText}, generate a description for ${label} based on your self knowledge base, if and only if given data is empty then generate a description for ${label} based on ${description} .`;
       const result = await model.generateContent([prompt]);
       const response = await result.response;
       // const text = await response.text();

@@ -172,6 +172,7 @@ function Sample() {
           <div style={{ width: "100vw", height: "100vh" }}>
             <MindMap
               skeleton={skeleton}
+              setSkeleton={setSkeleton}
               extractedText={extractedText}
               description={""}
               isDarkMode={true}

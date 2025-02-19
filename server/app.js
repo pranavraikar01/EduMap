@@ -6,7 +6,7 @@ const cors = require("cors");
 
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
-const tourRouter = require("./routes/tourRoutes");
+
 const userRouter = require("./routes/userRoutes");
 const mindmapRouter = require("./routes/mindmapRoutes");
 
@@ -26,7 +26,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/mindmaps", mindmapRouter);
 

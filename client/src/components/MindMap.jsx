@@ -1,138 +1,195 @@
-import { useCallback, useState, useEffect } from "react";
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-} from "@xyflow/react";
-import "reactflow/dist/style.css";
+import React, { useEffect, useRef, useState } from "react";
+import * as d3 from "d3";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import EditableNode from "./EditableNode";
-import { TailSpin } from "react-loader-spinner"; // Import the loader
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const initialNodes = [
-  {
-    id: "1",
-    data: { label: "Root Node" },
-    position: { x: 500, y: 500 },
-    style: {
-      background: "#ff6f61",
-      color: "white",
-      borderRadius: 10,
-      padding: 10,
-    },
-  },
-];
-
-const initialEdges = [];
-
-function computeLayout(nodes, parentPosition, depth = 0) {
-  const baseRadius = 650;
-  const radius = Math.max(100, baseRadius * Math.exp(-0.6 * depth));
-  const angleBetweenNodes = (2 * Math.PI) / nodes.length;
-  let layoutNodes = [];
-
-  nodes.forEach((node, index) => {
-    const angle = angleBetweenNodes * index;
-    const x = parentPosition.x + radius * Math.cos(angle);
-    const y = parentPosition.y + radius * Math.sin(angle);
-
-    layoutNodes.push({
-      ...node,
-      position: { x, y },
-      depth,
-      style: {
-        background: "#feb236",
-        color: "white",
-        borderRadius: 10,
-        padding: 10,
-      },
-    });
+const Mindmap = ({ skeleton, extractedText, description }) => {
+  const svgRef = useRef();
+  const [data, setData] = useState(null);
+  const [canvasSize, setCanvasSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
   });
 
-  return layoutNodes;
-}
+  useEffect(() => {
+    const handleResize = () => {
+      setCanvasSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-const Modal = ({ visible, content, onClose }) => {
-  if (!visible) return null;
+  useEffect(() => {
+    if (!skeleton) return;
 
-  return (
-    <div style={modalStyles.overlay}>
-      <div style={modalStyles.modal}>
-        <h3>Node Description</h3>
-        <div style={modalStyles.content}>
-          <p>{content}</p>
-        </div>
-        <button onClick={onClose} style={modalStyles.closeButton}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
+    const nodes = new Map();
+    const links = [];
 
-const modalStyles = {
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-  modal: {
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "8px",
-    width: "400px",
-    maxHeight: "80vh",
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
-  },
-  content: {
-    overflowY: "auto",
-    maxHeight: "60vh",
-    marginBottom: "10px",
-  },
-  closeButton: {
-    padding: "8px 16px",
-    backgroundColor: "#007BFF",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    alignSelf: "center",
-  },
-};
+    nodes.set("root", {
+      id: "root",
+      label: "Root",
+      x: canvasSize.width / 2,
+      y: canvasSize.height / 2,
+    });
 
-export default function MindMap({ skeleton, extractedText, description }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [expandedNodes, setExpandedNodes] = useState(new Set());
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalContent, setModalContent] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // Loader state
+    Object.entries(skeleton).forEach(([parentId, children]) => {
+      if (!nodes.has(parentId)) {
+        nodes.set(parentId, {
+          id: parentId,
+          label: `Node ${parentId}`,
+          x: Math.random() * canvasSize.width,
+          y: Math.random() * canvasSize.height,
+        });
+      }
 
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setEdges]
-  );
+      children.forEach((child) => {
+        if (!nodes.has(child.id)) {
+          nodes.set(child.id, {
+            id: child.id,
+            label: child.data.label,
+            x: Math.random() * canvasSize.width,
+            y: Math.random() * canvasSize.height,
+          });
+        }
+        links.push({ source: parentId, target: child.id });
+      });
+    });
 
-  const fetchNodeDescription = async (id, label) => {
-    setIsLoading(true); // Set loader state to true
+    setData({ nodes: Array.from(nodes.values()), links });
+  }, [skeleton, canvasSize]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    const svg = d3
+      .select(svgRef.current)
+      .attr("width", canvasSize.width)
+      .attr("height", canvasSize.height)
+      .style("background", "#f0f0f0");
+
+    svg.selectAll("*").remove(); // Clear previous drawings
+
+    const g = svg.append("g"); // Group for zooming & panning
+
+    const simulation = d3
+      .forceSimulation(data.nodes)
+      .force(
+        "link",
+        d3
+          .forceLink(data.links)
+          .id((d) => d.id)
+          .distance(100)
+      )
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force(
+        "center",
+        d3.forceCenter(canvasSize.width / 2, canvasSize.height / 2)
+      );
+
+    const link = g
+      .append("g")
+      .selectAll("line")
+      .data(data.links)
+      .join("line")
+      .attr("stroke", "#555")
+      .attr("stroke-width", 2);
+
+    const node = g
+      .append("g")
+      .selectAll("g")
+      .data(data.nodes)
+      .join("g")
+      .call(
+        d3.drag().on("start", dragStart).on("drag", dragged).on("end", dragEnd)
+      );
+
+    node
+      .append("circle")
+      .attr("r", 10)
+      .attr("fill", (d) => (d.id === "1" ? "#ff5733" : "#1e90ff")); // Root is red, others are blue
+
+    const text = node
+      .append("text")
+      .text((d) => (d.id === "1" ? "Root Node" : d.label))
+      .attr("x", 20)
+      .attr("y", 5)
+      .style("font-size", "18px")
+      .style("font-weight", "bold") // Make font bold
+      .style("cursor", "pointer")
+      .on("dblclick", editNodeText);
+
+    // Place "ⓘ" dynamically after text width
+    node.each(function (d) {
+      const textElement = d3.select(this).select("text");
+      const textWidth = textElement.node().getBBox().width;
+
+      d3.select(this)
+        .append("text")
+        .attr("class", "info-button")
+        .attr("x", 25 + textWidth) // Adjust based on text width
+        .attr("y", 5)
+        .attr("font-size", "16px")
+        .attr("fill", "blue")
+        .attr("cursor", "pointer")
+        .text("ⓘ")
+        .on("click", async (event) => {
+          event.stopPropagation();
+          await fetchDescription(d.label);
+        });
+    });
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+
+      node.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+    });
+
+    // Zoom & Pan
+    const zoom = d3
+      .zoom()
+      .scaleExtent([0.5, 3]) // Allow zoom between 50% and 300%
+      .on("zoom", (event) => g.attr("transform", event.transform));
+
+    svg.call(zoom); // Enable zooming and panning
+
+    function dragStart(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+
+    function dragEnd(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+
+    function editNodeText(event, d) {
+      event.stopPropagation();
+      const newText = prompt("Edit node label:", d.label);
+      if (newText) {
+        d.label = newText;
+        setData({ ...data });
+      }
+    }
+  }, [data, canvasSize]);
+
+  // Function to fetch descriptions using Gemini API
+  async function fetchDescription(label) {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = `Based on the data given in:\n ${extractedText}, generate a description for ${label} based on your self knowledge base. If the given data is empty, then generate a description for ${label} based on ${description}.`;
@@ -141,135 +198,14 @@ export default function MindMap({ skeleton, extractedText, description }) {
       const content =
         response.candidates[0].content.parts[0].text ||
         "No description available.";
-      setModalContent(`Description for "${label}":\n${content}`);
-      setModalVisible(true);
+      alert(`Description for "${label}":\n${content}`);
     } catch (error) {
       console.error("Error fetching description:", error);
-      setModalContent("An error occurred while fetching the description.");
-      setModalVisible(true);
-    } finally {
-      setIsLoading(false); // Set loader state to false after request is done
+      alert("An error occurred while fetching the description.");
     }
-  };
+  }
 
-  const onNodeClick = useCallback(
-    (event, node) => {
-      const isExpanded = expandedNodes.has(node.id);
-      let newNodes = [];
-      let newEdges = [];
+  return <svg ref={svgRef} style={{ display: "block" }} />;
+};
 
-      if (isExpanded) {
-        setNodes((nds) =>
-          nds.filter((n) => !skeleton[node.id]?.some((c) => c.id === n.id))
-        );
-        setEdges((eds) =>
-          eds.filter((e) => !skeleton[node.id]?.some((c) => e.target === c.id))
-        );
-        setExpandedNodes(
-          (prev) => new Set([...prev].filter((id) => id !== node.id))
-        );
-      } else {
-        if (skeleton[node.id]) {
-          const parentDepth = node.depth ?? 0;
-          newNodes = computeLayout(
-            skeleton[node.id].map((child) => ({
-              ...child,
-              depth: parentDepth + 1,
-            })),
-            node.position,
-            parentDepth + 1
-          );
-
-          newEdges = newNodes.map((childNode) => ({
-            id: `e${node.id}-${childNode.id}`,
-            source: node.id,
-            target: childNode.id,
-            animated: true,
-          }));
-
-          setExpandedNodes((prev) => new Set([...prev, node.id]));
-        }
-        setNodes((nds) => [...nds, ...newNodes]);
-        setEdges((eds) => [...eds, ...newEdges]);
-      }
-    },
-    [expandedNodes, nodes, edges, setNodes, setEdges, skeleton]
-  );
-
-  // Handle dragging of nodes and update child positions
-  const onNodeDragStop = (event, node) => {
-    const updatedNodes = nodes.map((n) =>
-      n.id === node.id
-        ? { ...n, position: { x: node.position.x, y: node.position.y } }
-        : n
-    );
-
-    if (skeleton[node.id]) {
-      const parentPosition = node.position;
-      const updatedChildren = skeleton[node.id].map((child) => {
-        const childNode = nodes.find((n) => n.id === child.id);
-        const parentDepth = node.depth ?? 0;
-        const radius = Math.max(150, 100 + Math.exp(-0.6 * parentDepth) * 150);
-        const angleBetweenNodes = (2 * Math.PI) / skeleton[node.id].length;
-        const angle = angleBetweenNodes * skeleton[node.id].indexOf(child);
-        const x = parentPosition.x + radius * Math.cos(angle);
-        const y = parentPosition.y + radius * Math.sin(angle);
-
-        return { ...childNode, position: { x, y } };
-      });
-
-      updatedNodes.push(...updatedChildren);
-    }
-
-    setNodes(updatedNodes); // Set the updated nodes
-  };
-
-  return (
-    <div style={{ width: "100vw", height: "100vh", background: "#f5f5f5" }}>
-      <ReactFlow
-        nodes={nodes.map((node) => ({
-          ...node,
-          type: "editableNode",
-          data: {
-            ...node.data,
-            onFetchDescription: () =>
-              fetchNodeDescription(node.id, node.data.label),
-          },
-        }))}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onNodeDragStop={onNodeDragStop}
-        nodeTypes={{ editableNode: EditableNode }}
-        fitView
-      >
-        <MiniMap nodeColor={() => "blue"} />
-        <Controls />
-        <Background variant="dots" gap={12} size={1} />
-      </ReactFlow>
-
-      {/* Loader Component - Visible when isLoading is true */}
-      {isLoading && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 1000,
-          }}
-        >
-          <TailSpin color="#007BFF" height={80} width={80} />
-        </div>
-      )}
-
-      <Modal
-        visible={modalVisible}
-        content={modalContent}
-        onClose={() => setModalVisible(false)}
-      />
-    </div>
-  );
-}
+export default Mindmap;

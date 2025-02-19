@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import MindMap from "./MindMap"; // Import the MindMap component
+import MindMap from "./Mindmap"; // Import the MindMap component
 import Navbar from "./Navbar";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;

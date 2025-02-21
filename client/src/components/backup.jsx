@@ -7,12 +7,11 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 const Mindmap = ({ skeleton, extractedText, description }) => {
   const svgRef = useRef();
-  const [data, setData] = useState({ nodes: [], links: [] });
+  const [data, setData] = useState(null);
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   });
-  const [subMindMapParentNode, setSubMindMapParentNode] = useState("");
 
   useEffect(() => {
     const handleResize = () => {
@@ -49,11 +48,10 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
       }
 
       children.forEach((child) => {
-        if (!child || !child.id || !child.data) return;
         if (!nodes.has(child.id)) {
           nodes.set(child.id, {
             id: child.id,
-            label: child.data.label || "Unnamed Node",
+            label: child.data.label,
             x: Math.random() * canvasSize.width,
             y: Math.random() * canvasSize.height,
           });
@@ -66,7 +64,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
   }, [skeleton, canvasSize]);
 
   useEffect(() => {
-    if (!data.nodes.length) return;
+    if (!data) return;
 
     const svg = d3
       .select(svgRef.current)
@@ -75,6 +73,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
       .style("background", "#f0f0f0");
 
     svg.selectAll("*").remove(); // Clear previous drawings
+
     const g = svg.append("g"); // Group for zooming & panning
 
     const simulation = d3
@@ -112,26 +111,27 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     node
       .append("circle")
       .attr("r", 15)
-      .attr("fill", (d) => (d.id === "root" ? "#ff5733" : "#1e90ff"));
+      .attr("fill", (d) => (d.id === "1" ? "#ff5733" : "#1e90ff")); // Root is red, others are blue
 
     const text = node
       .append("text")
-      .text((d) => d.label)
+      .text((d) => (d.id === "1" ? "Root Node" : d.label))
       .attr("x", 20)
       .attr("y", 5)
       .style("font-size", "18px")
-      .style("font-weight", "bold")
+      .style("font-weight", "bold") // Make font bold
       .style("cursor", "pointer")
       .on("dblclick", editNodeText);
 
+    // Place "ⓘ" dynamically after text width
     node.each(function (d) {
       const textElement = d3.select(this).select("text");
       const textWidth = textElement.node().getBBox().width;
 
-      // "ⓘ" Button (Info)
       d3.select(this)
         .append("text")
-        .attr("x", 25 + textWidth)
+        .attr("class", "info-button")
+        .attr("x", 25 + textWidth) // Adjust based on text width
         .attr("y", 5)
         .attr("font-size", "16px")
         .attr("fill", "blue")
@@ -139,21 +139,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
         .text("ⓘ")
         .on("click", async (event) => {
           event.stopPropagation();
-          await fetchNodeDescription(d);
-        });
-
-      // "➕" Button (Expand)
-      d3.select(this)
-        .append("text")
-        .attr("x", 45 + textWidth) // Positioned after "ⓘ"
-        .attr("y", 5)
-        .attr("font-size", "16px")
-        .attr("fill", "green")
-        .attr("cursor", "pointer")
-        .text("➕")
-        .on("click", async (event) => {
-          event.stopPropagation();
-          await expandNode(d);
+          await fetchDescription(d.label);
         });
     });
 
@@ -167,11 +153,13 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
       node.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
     });
 
+    // Zoom & Pan
     const zoom = d3
       .zoom()
-      .scaleExtent([0.5, 3])
+      .scaleExtent([0.5, 3]) // Allow zoom between 50% and 300%
       .on("zoom", (event) => g.attr("transform", event.transform));
-    svg.call(zoom);
+
+    svg.call(zoom); // Enable zooming and panning
 
     function dragStart(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -195,79 +183,22 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
       const newText = prompt("Edit node label:", d.label);
       if (newText) {
         d.label = newText;
-        setData((prev) => ({ ...prev }));
+        setData({ ...data });
       }
     }
   }, [data, canvasSize]);
 
-  async function expandNode(label) {
+  // Function to fetch descriptions using Gemini API
+  async function fetchDescription(label) {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Based on the data given in:\n ${extractedText}, generate a JSON structured sub-mind map for ${label.label}. The hierarchy must resemble the following structure:  
-      { "1": [{ "id": "2", "data": { "label": "Example" }, "type": "editableNode" }] }  
-      Return only valid JSON.`;
-
-      const result = await model.generateContent([prompt]);
-      const response = await result.response;
-      let content = response.candidates[0].content.parts[0].text;
-
-      // Clean up JSON formatting
-      content = content
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-      const newSubMindMap = JSON.parse(content);
-
-      setData((prevData) => {
-        const updatedNodes = [...prevData.nodes];
-        const updatedLinks = [...prevData.links];
-
-        // Find the parent node
-        const parentNode = updatedNodes.find(
-          (node) => node.label === label.label
-        );
-        if (!parentNode) return prevData;
-        setSubMindMapParentNode(parentNode);
-        console.log("Sub mindmap parent node", subMindMapParentNode);
-
-        // Convert new structure to nodes and links
-        Object.entries(newSubMindMap).forEach(([parentId, children]) => {
-          children.forEach((child) => {
-            if (!child || !child.id || !child.data) return;
-
-            // Create new node
-            const newNode = {
-              id: child.id,
-              label: child.data.label,
-              x: parentNode.x + Math.random() * 150 - 75,
-              y: parentNode.y + Math.random() * 150 - 75,
-            };
-
-            updatedNodes.push(newNode);
-            updatedLinks.push({ source: parentNode.id, target: newNode.id });
-          });
-        });
-
-        return { nodes: updatedNodes, links: updatedLinks };
-      });
-    } catch (error) {
-      console.error("Error fetching sub-mind map:", error);
-      alert("An error occurred while fetching the sub-mind map.");
-    }
-  }
-
-  async function fetchNodeDescription(node) {
-    try {
-      console.log("For description", subMindMapParentNode);
-      console.log(node.label);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `If ${subMindMapParentNode.label} is not undefined then give the description for  it else Based on the data given in:\n ${extractedText}, generate a description for ${node.label} based on your self knowledge base. If the given data is empty, then generate a description for ${node.label} based on ${description}.`;
+      const prompt = `Based on the data given in:\n ${extractedText}, generate a description for ${label} based on your self knowledge base. If the given data is empty, then generate a description for ${label} based on ${description}.`;
       const result = await model.generateContent([prompt]);
       const response = await result.response;
       const content =
         response.candidates[0].content.parts[0].text ||
         "No description available.";
-      alert(`Description for "${node.label}":\n${content}`);
+      alert(`Description for "${label}":\n${content}`);
     } catch (error) {
       console.error("Error fetching description:", error);
       alert("An error occurred while fetching the description.");

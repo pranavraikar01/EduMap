@@ -1,26 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import MindMap from "./Mindmap"; // Import the MindMap component
+import MindMap from "./Mindmap";
 import Navbar from "./Navbar";
+import styles from "./Sample.module.css";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-console.log(API_KEY); // Logs your API key from the .env file
-
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 function Sample() {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
   const [extractedText, setExtractedText] = useState("");
   const [error, setError] = useState("");
-  const [skeleton, setSkeleton] = useState(null); // To store the generated skeleton
-  const [description, setDescription] = useState(""); // For the mind map description
-  const [successMessage, setSuccessMessage] = useState(""); // For showing success or error messages
-  const [loading, setLoading] = useState(false); // Loading state for the loader
+  const [skeleton, setSkeleton] = useState(null);
+  const [description, setDescription] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (event) => {
-    setSelectedFile(event.target.files[0]);
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setFilePreview(URL.createObjectURL(file));
+    }
   };
 
+  const handleClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragActive(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragActive(false);
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setFilePreview(URL.createObjectURL(file));
+    }
+  };
   const handleFileUpload = async () => {
     if (!selectedFile) {
       setError("Please select a file");
@@ -30,7 +58,7 @@ function Sample() {
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    setLoading(true); // Start the loader
+    setLoading(true);
 
     try {
       const response = await fetch("http://localhost:5000/extract-text", {
@@ -40,9 +68,9 @@ function Sample() {
 
       if (response.ok) {
         const data = await response.json();
-        setExtractedText(data.text); // Store extracted text in state
+        setExtractedText(data.text);
         setError("");
-        await handleOpenAICall(data.text); // Send extracted text to Gemini API
+        await handleOpenAICall(data.text);
       } else {
         setError("Error in extracting text");
       }
@@ -50,10 +78,9 @@ function Sample() {
       console.error("API error:", error);
       setError("An error occurred");
     } finally {
-      setLoading(false); // End the loader
+      setLoading(false);
     }
   };
-
   const handleOpenAICall = async (extractedText) => {
     setLoading(true); // Start the loader for the Gemini API call
 
@@ -149,87 +176,69 @@ function Sample() {
   };
 
   return (
-    <div style={styles.container}>
+    <div className={styles.container}>
       <Navbar />
       <h1>PDF Text Extractor & Mind Map Generator</h1>
-      <input type="file" onChange={handleFileChange} /> <br />
-      <button onClick={handleFileUpload}>Upload and Extract Text</button>
-      {loading && <div style={styles.loader}>Loading...</div>}{" "}
-      {/* Loader here */}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {successMessage && <p style={{ color: "green" }}>{successMessage}</p>}
+
+      <div
+        className={`${styles.fileDropArea} ${dragActive ? styles.dragOver : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={handleClick}
+      >
+        <p>
+          Drag & Drop a file here or <span className={styles.uploadText}>click to upload</span>
+        </p>
+        <input
+          type="file"
+          className={styles.fileInput}
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          style={{ display: "none" }}
+        />
+      </div>
+
+      {filePreview && selectedFile && (
+        <div className={styles.previewContainer}>
+          <h3>File Preview:</h3>
+          {selectedFile.type.startsWith("image/") ? (
+            <img src={filePreview} alt="Preview" className={styles.imagePreview} />
+          ) : (
+            <embed src={filePreview} type="application/pdf" className={styles.pdfViewer} />
+          )}
+        </div>
+      )}
+
+      <button onClick={handleFileUpload} className={styles.uploadButton}>Upload and Extract Text</button>
+
+      {loading && <div className={styles.loader}>Loading...</div>}
+      {error && <p className={styles.errorText}>{error}</p>}
+      {successMessage && <p className={styles.successText}>{successMessage}</p>}
+
       {extractedText && (
         <div>
           <h2>Extracted Text:</h2>
-          <div style={styles.extractedTextBox}>
-            <pre style={styles.preformattedText}>{extractedText}</pre>
+          <div className={styles.extractedTextBox}>
+            <pre className={styles.preformattedText}>{extractedText}</pre>
           </div>
         </div>
       )}
+
       {skeleton && (
         <div>
           <h2>Generated Mind Map:</h2>
-          <div style={{ width: "100vw", height: "100vh" }}>
-            <MindMap
-              skeleton={skeleton}
-              setSkeleton={setSkeleton}
-              extractedText={extractedText}
-              description={""}
-              isDarkMode={true}
-            />
+          <div className={styles.mindMapContainer}>
+            <MindMap skeleton={skeleton} setSkeleton={setSkeleton} extractedText={extractedText} description={description} isDarkMode={true} />
           </div>
-          <div style={styles.descriptionContainer}>
-            <input
-              type="text"
-              placeholder="Enter description for mind map"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={styles.descriptionInput}
-            />
+          <div className={styles.descriptionContainer}>
+            <input type="text" placeholder="Enter description for mind map" value={description} onChange={(e) => setDescription(e.target.value)} className={styles.descriptionInput} />
           </div>
-          <button onClick={saveMindMap}>Save Mind Map</button>
+          <button className={styles.uploadButton}>Save Mind Map</button>
         </div>
       )}
     </div>
   );
 }
-
-const styles = {
-  container: {
-    textAlign: "center",
-    padding: "20px",
-  },
-  loader: {
-    fontSize: "20px",
-    fontWeight: "bold",
-    color: "blue",
-  },
-  extractedTextBox: {
-    display: "inline-block",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    padding: "15px",
-    backgroundColor: "#f9f9f9",
-    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-    marginTop: "10px",
-    maxHeight: "400px",
-    maxWidth: "700px",
-    overflowY: "auto",
-    textAlign: "center",
-  },
-  preformattedText: {
-    textAlign: "center",
-  },
-  descriptionContainer: {
-    marginTop: "20px",
-    textAlign: "center",
-  },
-  descriptionInput: {
-    width: "300px",
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-  },
-};
 
 export default Sample;

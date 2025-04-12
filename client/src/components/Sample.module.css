@@ -1,70 +1,121 @@
 .container {
-    text-align: center;
-    padding: 20px;
+  text-align: center;
+  padding: 20px;
 }
 
 .fileDropArea {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px auto;
-    padding: 20px;
-    border: 2px dashed #007bff;
-    border-radius: 12px;
-    background-color: #f9f9f9;
-    width: 50%;
-    text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  padding: 20px;
+  border: 2px dashed #007bff;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  width: 50%;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .fileDropArea.dragOver {
-    background-color: #d1ecf1;
+  background-color: #d1ecf1;
 }
 
 .uploadText {
-    color: #007bff;
-    font-weight: bold;
-    cursor: pointer;
+  color: #007bff;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .fileInput {
-    display: none;
+  display: none;
 }
 
 .previewContainer {
-    margin-top: 20px;
-    text-align: center;
+  margin-top: 20px;
+  text-align: center;
 }
 
 .imagePreview {
-    max-width: 300px;
-    border-radius: 10px;
+  max-width: 300px;
+  border-radius: 10px;
 }
 
 .pdfViewer {
-    width: 80%;
-    height: 600px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
+  width: 80%;
+  height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
 }
 
 .uploadButton {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 5px;
 }
 
 .loader {
-    margin: 10px;
+  margin: 10px;
 }
 
 .errorText {
-    color: red;
+  color: red;
 }
 
 .successText {
-    color: green;
+  color: green;
+}
+/* Dark mode styles */
+.dark {
+  background-color: #1a202c;
+  color: white;
+}
+
+.darkDropArea {
+  background-color: #2d3748;
+  border-color: #4a5568;
+}
+
+.darkInput {
+  background-color: #2d3748;
+  color: white;
+  border-color: #4a5568;
+}
+
+.darkModeToggle {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  padding: 8px 16px;
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 100;
+}
+
+.darkModeToggle:hover {
+  background-color: #2d3748;
+}
+
+/* Update existing styles for dark mode */
+.container {
+  min-height: 100vh;
+  padding: 20px;
+  transition: background-color 0.3s ease;
+}
+
+.fileDropArea {
+  /* ... existing styles ... */
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Update text colors for dark mode */
+.errorText,
+.successText {
+  color: inherit; /* This will inherit the dark/light mode color */
 }

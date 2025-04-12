@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import MindMap from "./Mindmap";
+import MindMap from "./MindMap";
 import Navbar from "./Navbar";
 import styles from "./Sample.module.css";
 
@@ -17,7 +17,14 @@ function Sample() {
   const [description, setDescription] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    document.body.style.backgroundColor = isDarkMode ? "#ffffff" : "#1a202c";
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -176,19 +183,28 @@ function Sample() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${isDarkMode ? styles.dark : ""}`}>
       <Navbar />
-      <h1>PDF Text Extractor & Mind Map Generator</h1>
+      <button onClick={toggleDarkMode} className={styles.darkModeToggle}>
+        {isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+      </button>
+
+      <h1 style={{ color: isDarkMode ? "white" : "black" }}>
+        PDF Text Extractor & Mind Map Generator
+      </h1>
 
       <div
-        className={`${styles.fileDropArea} ${dragActive ? styles.dragOver : ""}`}
+        className={`${styles.fileDropArea} ${
+          dragActive ? styles.dragOver : ""
+        } ${isDarkMode ? styles.darkDropArea : ""}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
       >
-        <p>
-          Drag & Drop a file here or <span className={styles.uploadText}>click to upload</span>
+        <p style={{ color: isDarkMode ? "white" : "black" }}>
+          Drag & Drop a file here or{" "}
+          <span className={styles.uploadText}>click to upload</span>
         </p>
         <input
           type="file"
@@ -203,14 +219,24 @@ function Sample() {
         <div className={styles.previewContainer}>
           <h3>File Preview:</h3>
           {selectedFile.type.startsWith("image/") ? (
-            <img src={filePreview} alt="Preview" className={styles.imagePreview} />
+            <img
+              src={filePreview}
+              alt="Preview"
+              className={styles.imagePreview}
+            />
           ) : (
-            <embed src={filePreview} type="application/pdf" className={styles.pdfViewer} />
+            <embed
+              src={filePreview}
+              type="application/pdf"
+              className={styles.pdfViewer}
+            />
           )}
         </div>
       )}
 
-      <button onClick={handleFileUpload} className={styles.uploadButton}>Upload and Extract Text</button>
+      <button onClick={handleFileUpload} className={styles.uploadButton}>
+        Upload and Extract Text
+      </button>
 
       {loading && <div className={styles.loader}>Loading...</div>}
       {error && <p className={styles.errorText}>{error}</p>}
@@ -227,12 +253,28 @@ function Sample() {
 
       {skeleton && (
         <div>
-          <h2>Generated Mind Map:</h2>
+          <h2 style={{ color: isDarkMode ? "white" : "black" }}>
+            Generated Mind Map:
+          </h2>
           <div className={styles.mindMapContainer}>
-            <MindMap skeleton={skeleton} setSkeleton={setSkeleton} extractedText={extractedText} description={description} isDarkMode={true} />
+            <MindMap
+              skeleton={skeleton}
+              setSkeleton={setSkeleton}
+              extractedText={extractedText}
+              description={description}
+              isDarkMode={isDarkMode}
+            />
           </div>
           <div className={styles.descriptionContainer}>
-            <input type="text" placeholder="Enter description for mind map" value={description} onChange={(e) => setDescription(e.target.value)} className={styles.descriptionInput} />
+            <input
+              type="text"
+              placeholder="Enter description for mind map"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`${styles.descriptionInput} ${
+                isDarkMode ? styles.darkInput : ""
+              }`}
+            />
           </div>
           <button className={styles.uploadButton}>Save Mind Map</button>
         </div>
@@ -240,5 +282,4 @@ function Sample() {
     </div>
   );
 }
-
 export default Sample;

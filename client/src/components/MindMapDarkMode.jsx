@@ -6,7 +6,7 @@ import { saveAs } from "file-saver";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const Mindmap = ({ skeleton, extractedText, description }) => {
+const Mindmap = ({ skeleton, extractedText, description, isDarkMode }) => {
   const svgRef = useRef();
   const canvasRef = useRef();
   const textInputRef = useRef();
@@ -24,9 +24,9 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     node: "#1e90ff",
     root: "#ff5733",
     line: "#555",
-    drawing: "#000000",
-    textboxBg: "#ffffff",
-    textboxText: "#000000",
+    drawing: isDarkMode ? "#ffffff" : "#000000",
+    textboxBg: isDarkMode ? "#2d3748" : "#ffffff",
+    textboxText: isDarkMode ? "#ffffff" : "#000000",
   });
   const [selectedNode, setSelectedNode] = useState(null);
   const [editingTextBox, setEditingTextBox] = useState(null);
@@ -34,6 +34,16 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
   const [gridSize, setGridSize] = useState(20);
   const [showGrid, setShowGrid] = useState(true);
   const [resizingHandle, setResizingHandle] = useState(null);
+
+  // Update colors when dark mode changes
+  useEffect(() => {
+    setColors((prev) => ({
+      ...prev,
+      drawing: isDarkMode ? "#ffffff" : "#000000",
+      textboxBg: isDarkMode ? "#2d3748" : "#ffffff",
+      textboxText: isDarkMode ? "#ffffff" : "#000000",
+    }));
+  }, [isDarkMode]);
 
   // Initialize data from skeleton
   useEffect(() => {
@@ -689,36 +699,23 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     img.src = url;
   };
 
-  // Custom Model API functions
+  // Gemini API functions
   async function expandNode(label) {
     try {
-      console.log("Expanding node:", label.label);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Based on the data given in:\n ${extractedText}, generate a JSON structured sub-mind map for ${label.label}. The hierarchy must resemble the following structure:  
+      { "1": [{ "id": "2", "data": { "label": "Example" }, "type": "editableNode" }] }  
+      Return only valid JSON.`;
 
-      const response = await fetch(
-        "https://0946-34-168-113-29.ngrok-free.app/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ topic: label.label }),
-        }
-      );
+      const result = await model.generateContent([prompt]);
+      const response = await result.response;
+      let content = response.candidates[0].content.parts[0].text;
 
-      const data = await response.json();
-
-      let content = data.mindmap;
-
-      // Clean up if it's double-encoded JSON string
-      if (typeof content === "string") {
-        content = content
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        content = JSON.parse(content);
-      }
-
-      console.log("New submindmap", content);
+      content = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const newSubMindMap = JSON.parse(content);
 
       setData((prevData) => {
         const updatedNodes = [...prevData.nodes];
@@ -752,7 +749,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
         if (!parentNode) return prevData;
 
         setSubMindMapParentNode(parentNode);
-        processHierarchy(parentNode, content);
+        processHierarchy(parentNode, newSubMindMap);
 
         return { nodes: updatedNodes, links: updatedLinks };
       });
@@ -791,7 +788,9 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           left: 0,
           zIndex: 1,
           pointerEvents: "auto",
-          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          backgroundColor: isDarkMode
+            ? "rgba(45, 55, 72, 0.8)"
+            : "rgba(255, 255, 255, 0.8)",
         }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
@@ -845,7 +844,8 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
             top: `${editingTextBox.y}px`,
             left: `${editingTextBox.x + editingTextBox.width + 10}px`,
             zIndex: 4,
-            backgroundColor: "white",
+            backgroundColor: isDarkMode ? "#2d3748" : "white",
+            color: isDarkMode ? "white" : "black",
             padding: "10px",
             borderRadius: "5px",
             boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
@@ -959,7 +959,8 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           top: "10px",
           left: "10px",
           zIndex: 3,
-          backgroundColor: "white",
+          backgroundColor: isDarkMode ? "#2d3748" : "white",
+          color: isDarkMode ? "white" : "black",
           padding: "10px",
           borderRadius: "5px",
           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",

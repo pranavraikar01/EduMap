@@ -9,7 +9,6 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const Mindmap = ({ skeleton, extractedText, description }) => {
   const svgRef = useRef();
   const canvasRef = useRef();
-  const textInputRef = useRef();
   const [data, setData] = useState({ nodes: [], links: [] });
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth,
@@ -25,15 +24,8 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     root: "#ff5733",
     line: "#555",
     drawing: "#000000",
-    textboxBg: "#ffffff",
-    textboxText: "#000000",
   });
   const [selectedNode, setSelectedNode] = useState(null);
-  const [editingTextBox, setEditingTextBox] = useState(null);
-  const [activeTextBox, setActiveTextBox] = useState(null);
-  const [gridSize, setGridSize] = useState(20);
-  const [showGrid, setShowGrid] = useState(true);
-  const [resizingHandle, setResizingHandle] = useState(null);
 
   // Initialize data from skeleton
   useEffect(() => {
@@ -237,35 +229,13 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     svg.call(zoom);
   }, [data, canvasSize, colors, selectedNode]);
 
-  // Draw grid and canvas elements
+  // Canvas drawing functions
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw grid if enabled
-    if (showGrid) {
-      ctx.strokeStyle = "#e0e0e0";
-      ctx.lineWidth = 0.5;
-
-      // Vertical lines
-      for (let x = 0; x <= canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-
-      // Horizontal lines
-      for (let y = 0; y <= canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-    }
 
     // Redraw all canvas elements
     canvasElements.forEach((element) => {
@@ -290,34 +260,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
         ctx.font = `${element.size || 16}px Arial`;
         ctx.fillStyle = element.color || colors.drawing;
         ctx.fillText(element.text, element.x, element.y);
-      } else if (element.type === "textbox") {
-        // Draw textbox background
-        ctx.fillStyle = element.bgColor || colors.textboxBg;
-        ctx.strokeStyle = element.color || colors.drawing;
-        ctx.lineWidth = element.width || 2;
-        ctx.fillRect(element.x, element.y, element.width, element.height);
-        ctx.strokeRect(element.x, element.y, element.width, element.height);
-
-        // Draw text
-        ctx.fillStyle = element.textColor || colors.textboxText;
-        ctx.font = `${element.fontSize || 16}px Arial`;
-        const lines = element.text.split("\n");
-        const lineHeight = element.lineHeight || 20;
-
-        lines.forEach((line, i) => {
-          ctx.fillText(line, element.x + 5, element.y + 15 + i * lineHeight);
-        });
-
-        // Draw resize handle if active
-        if (activeTextBox && activeTextBox.id === element.id) {
-          ctx.fillStyle = "#2196F3";
-          ctx.fillRect(
-            element.x + element.width - 8,
-            element.y + element.height - 8,
-            8,
-            8
-          );
-        }
       }
     });
 
@@ -332,63 +274,18 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
       }
       ctx.stroke();
     }
-  }, [
-    canvasElements,
-    drawingPath,
-    isDrawing,
-    colors,
-    showGrid,
-    gridSize,
-    activeTextBox,
-  ]);
-
-  // Handle text input changes
-  useEffect(() => {
-    if (activeTextBox && textInputRef.current) {
-      textInputRef.current.focus();
-      textInputRef.current.value = activeTextBox.text;
-    }
-  }, [activeTextBox]);
+  }, [canvasElements, drawingPath, isDrawing, colors]);
 
   const handleCanvasMouseDown = (e) => {
+    if (selectedTool === "select") {
+      setSelectedNode(null);
+      return;
+    }
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    if (selectedTool === "select") {
-      // Check if clicking on a textbox to edit
-      const clickedTextBox = canvasElements.find(
-        (el) =>
-          el.type === "textbox" &&
-          x >= el.x &&
-          x <= el.x + el.width &&
-          y >= el.y &&
-          y <= el.y + el.height
-      );
-
-      if (clickedTextBox) {
-        // Check if clicking on resize handle
-        if (
-          x >= clickedTextBox.x + clickedTextBox.width - 8 &&
-          x <= clickedTextBox.x + clickedTextBox.width &&
-          y >= clickedTextBox.y + clickedTextBox.height - 8 &&
-          y <= clickedTextBox.y + clickedTextBox.height
-        ) {
-          setResizingHandle(clickedTextBox);
-          return;
-        }
-
-        setActiveTextBox(clickedTextBox);
-        setEditingTextBox(null);
-        return;
-      }
-
-      setActiveTextBox(null);
-      setSelectedNode(null);
-      setEditingTextBox(null);
-      return;
-    }
 
     setIsDrawing(true);
 
@@ -409,23 +306,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           },
         ]);
       }
-    } else if (selectedTool === "textbox") {
-      const newTextBox = {
-        id: Date.now().toString(),
-        type: "textbox",
-        x,
-        y,
-        width: 200,
-        height: 100,
-        text: "",
-        bgColor: colors.textboxBg,
-        textColor: colors.textboxText,
-        color: colors.drawing,
-        fontSize: 16,
-        lineHeight: 20,
-      };
-      setCanvasElements((prev) => [...prev, newTextBox]);
-      setActiveTextBox(newTextBox);
     } else {
       setCanvasElements((prev) => [
         ...prev,
@@ -442,32 +322,13 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
   };
 
   const handleCanvasMouseMove = (e) => {
+    if (!isDrawing || selectedTool === "select" || selectedTool === "text")
+      return;
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    if (resizingHandle) {
-      const newWidth = Math.max(50, x - resizingHandle.x);
-      const newHeight = Math.max(30, y - resizingHandle.y);
-
-      setCanvasElements((prev) =>
-        prev.map((el) =>
-          el.id === resizingHandle.id
-            ? { ...el, width: newWidth, height: newHeight }
-            : el
-        )
-      );
-      return;
-    }
-
-    if (
-      !isDrawing ||
-      selectedTool === "select" ||
-      selectedTool === "text" ||
-      selectedTool === "textbox"
-    )
-      return;
 
     if (selectedTool === "freehand") {
       setDrawingPath((prev) => [...prev, { x, y }]);
@@ -494,11 +355,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
   };
 
   const handleCanvasMouseUp = () => {
-    if (resizingHandle) {
-      setResizingHandle(null);
-      return;
-    }
-
     if (!isDrawing) return;
 
     setIsDrawing(false);
@@ -515,24 +371,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     }
 
     setDrawingPath([]);
-  };
-
-  const handleTextInputChange = (e) => {
-    if (!activeTextBox) return;
-
-    setCanvasElements((prev) =>
-      prev.map((el) =>
-        el.id === activeTextBox.id ? { ...el, text: e.target.value } : el
-      )
-    );
-  };
-
-  const handleTextInputBlur = () => {
-    setActiveTextBox(null);
-  };
-
-  const handleTextBoxDoubleClick = (element) => {
-    setActiveTextBox(element);
   };
 
   const drawArrow = (ctx, start, end) => {
@@ -583,8 +421,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
   const clearCanvas = () => {
     if (window.confirm("Clear all drawings?")) {
       setCanvasElements([]);
-      setEditingTextBox(null);
-      setActiveTextBox(null);
     }
   };
 
@@ -600,74 +436,8 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     exportCanvas.height = canvasSize.height;
     const ctx = exportCanvas.getContext("2d");
 
-    // Draw white background first
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-    // Draw grid if enabled
-    if (showGrid) {
-      ctx.strokeStyle = "#e0e0e0";
-      ctx.lineWidth = 0.5;
-
-      // Vertical lines
-      for (let x = 0; x <= exportCanvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, exportCanvas.height);
-        ctx.stroke();
-      }
-
-      // Horizontal lines
-      for (let y = 0; y <= exportCanvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(exportCanvas.width, y);
-        ctx.stroke();
-      }
-    }
-
-    // Draw canvas elements
-    canvasElements.forEach((element) => {
-      ctx.beginPath();
-      ctx.strokeStyle = element.color || colors.drawing;
-      ctx.lineWidth = element.width || 2;
-
-      if (element.type === "freehand" && element.points.length > 1) {
-        ctx.moveTo(element.points[0].x, element.points[0].y);
-        for (let i = 1; i < element.points.length; i++) {
-          ctx.lineTo(element.points[i].x, element.points[i].y);
-        }
-        ctx.stroke();
-      } else if (element.type === "rectangle") {
-        ctx.strokeRect(element.x, element.y, element.width, element.height);
-      } else if (element.type === "circle") {
-        ctx.arc(element.x, element.y, element.radius, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (element.type === "arrow") {
-        drawArrow(ctx, element.start, element.end);
-      } else if (element.type === "text") {
-        ctx.font = `${element.size || 16}px Arial`;
-        ctx.fillStyle = element.color || colors.drawing;
-        ctx.fillText(element.text, element.x, element.y);
-      } else if (element.type === "textbox") {
-        // Draw textbox background
-        ctx.fillStyle = element.bgColor || colors.textboxBg;
-        ctx.strokeStyle = element.color || colors.drawing;
-        ctx.lineWidth = element.width || 2;
-        ctx.fillRect(element.x, element.y, element.width, element.height);
-        ctx.strokeRect(element.x, element.y, element.width, element.height);
-
-        // Draw text
-        ctx.fillStyle = element.textColor || colors.textboxText;
-        ctx.font = `${element.fontSize || 16}px Arial`;
-        const lines = element.text.split("\n");
-        const lineHeight = element.lineHeight || 20;
-
-        lines.forEach((line, i) => {
-          ctx.fillText(line, element.x + 5, element.y + 15 + i * lineHeight);
-        });
-      }
-    });
+    // Draw canvas elements first
+    ctx.drawImage(canvas, 0, 0);
 
     // Draw SVG
     const svgData = new XMLSerializer().serializeToString(svg);
@@ -689,36 +459,23 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     img.src = url;
   };
 
-  // Custom Model API functions
+  // Gemini API functions
   async function expandNode(label) {
     try {
-      console.log("Expanding node:", label.label);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Based on the data given in:\n ${extractedText}, generate a JSON structured sub-mind map for ${label.label}. The hierarchy must resemble the following structure:  
+      { "1": [{ "id": "2", "data": { "label": "Example" }, "type": "editableNode" }] }  
+      Return only valid JSON.`;
 
-      const response = await fetch(
-        "https://0946-34-168-113-29.ngrok-free.app/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ topic: label.label }),
-        }
-      );
+      const result = await model.generateContent([prompt]);
+      const response = await result.response;
+      let content = response.candidates[0].content.parts[0].text;
 
-      const data = await response.json();
-
-      let content = data.mindmap;
-
-      // Clean up if it's double-encoded JSON string
-      if (typeof content === "string") {
-        content = content
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        content = JSON.parse(content);
-      }
-
-      console.log("New submindmap", content);
+      content = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const newSubMindMap = JSON.parse(content);
 
       setData((prevData) => {
         const updatedNodes = [...prevData.nodes];
@@ -752,7 +509,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
         if (!parentNode) return prevData;
 
         setSubMindMapParentNode(parentNode);
-        processHierarchy(parentNode, content);
+        processHierarchy(parentNode, newSubMindMap);
 
         return { nodes: updatedNodes, links: updatedLinks };
       });
@@ -791,39 +548,12 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           left: 0,
           zIndex: 1,
           pointerEvents: "auto",
-          backgroundColor: "rgba(255, 255, 255, 0.8)",
         }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
       />
-
-      {/* Text input for active textbox */}
-      {activeTextBox && (
-        <textarea
-          ref={textInputRef}
-          style={{
-            position: "absolute",
-            top: `${activeTextBox.y}px`,
-            left: `${activeTextBox.x}px`,
-            width: `${activeTextBox.width}px`,
-            height: `${activeTextBox.height}px`,
-            zIndex: 4,
-            backgroundColor: activeTextBox.bgColor || colors.textboxBg,
-            color: activeTextBox.textColor || colors.textboxText,
-            border: `2px solid ${activeTextBox.color || colors.drawing}`,
-            padding: "5px",
-            fontSize: `${activeTextBox.fontSize || 16}px`,
-            lineHeight: `${activeTextBox.lineHeight || 20}px`,
-            resize: "none",
-            outline: "none",
-          }}
-          value={activeTextBox.text}
-          onChange={handleTextInputChange}
-          onBlur={handleTextInputBlur}
-        />
-      )}
 
       {/* D3 SVG Mindmap */}
       <svg
@@ -836,121 +566,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           pointerEvents: selectedTool === "select" ? "auto" : "none",
         }}
       />
-
-      {/* Textbox editor modal */}
-      {editingTextBox && (
-        <div
-          style={{
-            position: "absolute",
-            top: `${editingTextBox.y}px`,
-            left: `${editingTextBox.x + editingTextBox.width + 10}px`,
-            zIndex: 4,
-            backgroundColor: "white",
-            padding: "10px",
-            borderRadius: "5px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          }}
-        >
-          <h4>Edit Textbox</h4>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Background Color:</label>
-            <input
-              type="color"
-              value={editingTextBox.bgColor || colors.textboxBg}
-              onChange={(e) => {
-                setCanvasElements((prev) =>
-                  prev.map((el) =>
-                    el === editingTextBox
-                      ? { ...el, bgColor: e.target.value }
-                      : el
-                  )
-                );
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Text Color:</label>
-            <input
-              type="color"
-              value={editingTextBox.textColor || colors.textboxText}
-              onChange={(e) => {
-                setCanvasElements((prev) =>
-                  prev.map((el) =>
-                    el === editingTextBox
-                      ? { ...el, textColor: e.target.value }
-                      : el
-                  )
-                );
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Border Color:</label>
-            <input
-              type="color"
-              value={editingTextBox.color || colors.drawing}
-              onChange={(e) => {
-                setCanvasElements((prev) =>
-                  prev.map((el) =>
-                    el === editingTextBox
-                      ? { ...el, color: e.target.value }
-                      : el
-                  )
-                );
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Font Size:</label>
-            <input
-              type="number"
-              value={editingTextBox.fontSize || 16}
-              onChange={(e) => {
-                setCanvasElements((prev) =>
-                  prev.map((el) =>
-                    el === editingTextBox
-                      ? { ...el, fontSize: parseInt(e.target.value) }
-                      : el
-                  )
-                );
-              }}
-            />
-          </div>
-          <button
-            onClick={() => {
-              const newText = prompt("Edit text:", editingTextBox.text);
-              if (newText !== null) {
-                setCanvasElements((prev) =>
-                  prev.map((el) =>
-                    el === editingTextBox ? { ...el, text: newText } : el
-                  )
-                );
-              }
-            }}
-          >
-            Edit Text
-          </button>
-          <button
-            style={{ marginLeft: "5px" }}
-            onClick={() => {
-              if (window.confirm("Delete this textbox?")) {
-                setCanvasElements((prev) =>
-                  prev.filter((el) => el !== editingTextBox)
-                );
-                setEditingTextBox(null);
-              }
-            }}
-          >
-            Delete
-          </button>
-          <button
-            style={{ marginLeft: "5px" }}
-            onClick={() => setEditingTextBox(null)}
-          >
-            Close
-          </button>
-        </div>
-      )}
 
       {/* Toolbar */}
       <div
@@ -1057,20 +672,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
           >
             T
           </button>
-
-          <button
-            style={{
-              backgroundColor: selectedTool === "textbox" ? "#ddd" : "white",
-              border: "1px solid #ccc",
-              padding: "5px 10px",
-              borderRadius: "3px",
-              cursor: "pointer",
-            }}
-            onClick={() => setSelectedTool("textbox")}
-            title="Add textbox"
-          >
-            📝
-          </button>
         </div>
 
         <div style={{ marginTop: "10px" }}>
@@ -1108,48 +709,6 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
                 onChange={(e) => changeColor("line", e.target.value)}
               />
             </div>
-            <div>
-              <div style={{ fontSize: "12px" }}>Textbox BG</div>
-              <input
-                type="color"
-                value={colors.textboxBg}
-                onChange={(e) => changeColor("textboxBg", e.target.value)}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: "12px" }}>Textbox Text</div>
-              <input
-                type="color"
-                value={colors.textboxText}
-                onChange={(e) => changeColor("textboxText", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: "10px" }}>
-          <label>Grid Settings:</label>
-          <div style={{ display: "flex", gap: "5px", marginTop: "5px" }}>
-            <button
-              style={{
-                backgroundColor: showGrid ? "#ddd" : "white",
-                border: "1px solid #ccc",
-                padding: "5px 10px",
-                borderRadius: "3px",
-                cursor: "pointer",
-              }}
-              onClick={() => setShowGrid(!showGrid)}
-            >
-              {showGrid ? "Hide Grid" : "Show Grid"}
-            </button>
-            <input
-              type="range"
-              min="10"
-              max="50"
-              value={gridSize}
-              onChange={(e) => setGridSize(parseInt(e.target.value))}
-            />
-            <span>{gridSize}px</span>
           </div>
         </div>
 

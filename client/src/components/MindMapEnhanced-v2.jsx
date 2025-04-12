@@ -689,36 +689,23 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
     img.src = url;
   };
 
-  // Custom Model API functions
+  // Gemini API functions
   async function expandNode(label) {
     try {
-      console.log("Expanding node:", label.label);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Based on the data given in:\n ${extractedText}, generate a JSON structured sub-mind map for ${label.label}. The hierarchy must resemble the following structure:  
+      { "1": [{ "id": "2", "data": { "label": "Example" }, "type": "editableNode" }] }  
+      Return only valid JSON.`;
 
-      const response = await fetch(
-        "https://0946-34-168-113-29.ngrok-free.app/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ topic: label.label }),
-        }
-      );
+      const result = await model.generateContent([prompt]);
+      const response = await result.response;
+      let content = response.candidates[0].content.parts[0].text;
 
-      const data = await response.json();
-
-      let content = data.mindmap;
-
-      // Clean up if it's double-encoded JSON string
-      if (typeof content === "string") {
-        content = content
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        content = JSON.parse(content);
-      }
-
-      console.log("New submindmap", content);
+      content = content
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const newSubMindMap = JSON.parse(content);
 
       setData((prevData) => {
         const updatedNodes = [...prevData.nodes];
@@ -752,7 +739,7 @@ const Mindmap = ({ skeleton, extractedText, description }) => {
         if (!parentNode) return prevData;
 
         setSubMindMapParentNode(parentNode);
-        processHierarchy(parentNode, content);
+        processHierarchy(parentNode, newSubMindMap);
 
         return { nodes: updatedNodes, links: updatedLinks };
       });
